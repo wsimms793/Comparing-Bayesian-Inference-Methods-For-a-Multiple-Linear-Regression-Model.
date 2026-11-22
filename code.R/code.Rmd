@@ -1,0 +1,704 @@
+---
+title: "\"Bayesian Inference for Multiple Linear Regression with Correlated Variables - R code\""
+author: "William Simms"
+date: "2026-11-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+```
+
+Packages and libraries to be used later.
+```{r}
+#Install required packages.
+install.packages(c("ggplot2", "lsmeans", "metropolis", "MCMCpack", "CompRiskRel"))
+```
+
+```{r}
+library(ggplot2)
+library(lsmeans)
+library(metropolis)
+library(coda)
+library(MCMCpack)
+library(CompRiskRel)
+```
+
+Set True parameter values.
+```{r}
+Truebeta_0 <- 1; Truebeta_1 <- 2; Truebeta_2 <- -1; Truetau <- 1
+true_values <- c(Beta0 = Truebeta_0, Beta1 = Truebeta_1, Beta2 = Truebeta_2, Tau = Truetau)
+```
+
+Data generation.
+```{r}
+set.seed(4008)
+#Sample Sizes.
+n_vals <- c(30,250,1000)
+#Correlation coefficients.
+Rho_vals <- c(0,0.9)
+Datasets <- list()
+#Counter for loops.
+i <- 1
+for (n in n_vals) {
+  #Generate normal variables.
+  X1 <- rnorm(n, mean = 0, sd = 1)
+  Z <- rnorm(n, mean = 0, sd = 1)
+  #Generate error variable.
+  Eps <- rnorm(n, mean = 0, sd = sqrt(1/Truetau))
+  for (Rho in Rho_vals) {
+    #Generate second explanatory variable.
+    X2 <- Rho*X1 + sqrt(1-Rho^2)*Z
+    #Generate outcome variable.
+    Y <- Truebeta_0 + Truebeta_1*X1 + Truebeta_2*X2 + Eps
+    #Store data set.
+    Data <- data.frame(Y,X1,X2)
+    Datasets[[i]] <- Data
+    i <- i + 1}}
+```
+
+Ordinary Least Squares Estimation.
+```{r}
+#Storage for all data.
+Results_LS <- list()
+
+#Fit for each data set.
+for (i in 1:length(Datasets)){
+  Data <- Datasets[[i]]
+  Results_LS[[i]] <- lm(Y ~ X1 + X2, data = Data)}
+
+#Display results.
+for (i in 1:length(Results_LS)) {
+  print(paste("Dataset", i))
+  print(summary(Results_LS[[i]]))
+  print(confint(Results_LS[[i]]))
+
+  #Maximum likelihood estimate of tau.
+  RSS <- sum(Results_LS[[i]]$residuals^2)
+  n <- nrow(Datasets[[i]])
+  Tau_MLE <- n/RSS
+  print(paste("Tau:", Tau_MLE))}
+```
+
+Hyper parameters setup.
+```{r}
+beta0mean <- 0; beta1mean <- 0; beta2mean <- 0
+beta0var <- 4; beta1var <- 4; beta2var <- 4
+taushape <- 2; taurate <- 2
+```
+
+Importance Sampling.
+```{r}
+#Set seed.
+set.seed(4008)
+#Number of prior samples.
+K <- 10000
+#Number of posterior samples.
+nsamples <- 1000
+#Storage for importance sampling results.
+Results_IS <- list()
+
+#Apply importance sampling to each dataset.
+for (i in 1:length(Datasets)) {
+  #Select data set.
+  Data <- Datasets[[i]]
+  Y <- Data$Y
+  X1 <- Data$X1
+  X2 <- Data$X2
+
+  #Generate samples from the prior distributions.
+  beta0_samples <- rnorm(K, beta0mean, sqrt(beta0var))
+  beta1_samples <- rnorm(K, beta1mean, sqrt(beta1var))
+  beta2_samples <- rnorm(K, beta2mean, sqrt(beta2var))
+  tau_samples <- rgamma(K, shape = taushape, rate = taurate)
+
+  #Storage for log weights.
+  logweights <- numeric(K)
+  #Calculate log weights.
+  for (j in 1:K) {logweights[j] <- sum(dnorm(Y,mean = beta0_samples[j] + beta1_samples[j]*X1 + beta2_samples[j]*X2, sd = sqrt(1/tau_samples[j]),log = TRUE))}
+  #Calculate weights.
+  weights <- exp(logweights - max(logweights))
+  weights <- weights/sum(weights)
+
+  #Calculate posterior means.
+  posterior_means <- c(Beta0 = sum(weights*beta0_samples),Beta1 = sum(weights*beta1_samples),Beta2 = sum(weights*beta2_samples),Tau = sum(weights*tau_samples))
+
+  #Generate posterior samples.
+  selected <- sample(1:K, size = nsamples,replace = TRUE, prob = weights)
+  posterior_beta0 <- beta0_samples[selected]
+  posterior_beta1 <- beta1_samples[selected]
+  posterior_beta2 <- beta2_samples[selected]
+  posterior_tau <- tau_samples[selected]
+
+  #Store results.
+  Results_IS[[i]] <- list(Means = posterior_means,Beta0 = posterior_beta0,Beta1 = posterior_beta1,Beta2 = posterior_beta2,Tau = posterior_tau)}
+```
+
+```{r}
+#Display importance sampling results.
+for (i in 1:length(Results_IS)) {
+  print(paste("Dataset", i))
+  print(Results_IS[[i]]$Means)}
+
+#Calculate 95% credible intervals.
+for (i in 1:length(Results_IS)) {
+  print(paste("Dataset", i))
+
+  print(quantile(Results_IS[[i]]$Beta0, c(0.025, 0.975)))
+  print(quantile(Results_IS[[i]]$Beta1, c(0.025, 0.975)))
+  print(quantile(Results_IS[[i]]$Beta2, c(0.025, 0.975)))
+  print(quantile(Results_IS[[i]]$Tau, c(0.025, 0.975)))}
+for (i in seq_along(Results_IS)) {
+  cat("Dataset", i, "\n")
+  print(abs(Results_IS[[i]]$Means - true_values))
+}
+```
+Plots.
+```{r}
+#Plot posterior distributions for all datasets.
+for (i in 1:length(Results_IS)) {
+  #Set plotting layout.
+  par(mfrow = c(2,2))
+
+  #Posterior of Beta 0.
+  hist(Results_IS[[i]]$Beta0,main = paste("Dataset", i, "- Beta 0"),xlab = "Beta 0",xlim = c(0,2)) 
+  abline(v = Truebeta_0, col = "red")
+  #Posterior of Beta 1.
+  hist(Results_IS[[i]]$Beta1,main = paste("Dataset", i, "- Beta 1"),xlab = "Beta 1",xlim = c(-1,4)) 
+  abline(v = Truebeta_1, col = "red")
+  #Posterior of Beta 2.
+  hist(Results_IS[[i]]$Beta2,main = paste("Dataset", i, "- Beta 2"),xlab = "Beta 2",xlim = c(-3,1)) 
+  abline(v = Truebeta_2, col = "red")
+  #Posterior of Tau.
+  hist(Results_IS[[i]]$Tau,main = paste("Dataset", i, "- Tau"),xlab = "Tau",xlim = c(0,2))
+  abline(v = Truetau, col = "red")}
+```
+Metropolis-Hastings.
+```{r}
+#Calculate log posterior.
+logposterior <- function(param, Data) {
+  beta0 <- param[1]
+  beta1 <- param[2]
+  beta2 <- param[3]
+  tau <- exp(param[4])
+
+  #Calculate log likelihood.
+  loglikelihood <- sum(dnorm(Data$Y,mean = beta0 + beta1*Data$X1 + beta2*Data$X2, sd = sqrt(1/tau), log = TRUE))
+  #Calculate log prior.
+  logprior <- dnorm(beta0, beta0mean, sqrt(beta0var), log = TRUE) +
+              dnorm(beta1, beta1mean, sqrt(beta1var), log = TRUE) +
+              dnorm(beta2, beta2mean, sqrt(beta2var), log = TRUE) +
+              dgamma(tau, shape = taushape, rate = taurate, log = TRUE)
+  #Return log posterior.
+  return(loglikelihood + logprior + param[4])}
+```
+
+
+```{r}
+#Set seed.
+set.seed(4008)
+#Number of iterations.
+iterations <- 10000
+#Number of burn-in iterations.
+burnin <- 2000
+#Storage for Metropolis-Hastings results.
+Results_MH <- list()
+
+#Apply Metropolis-Hastings to each dataset.
+for (i in 1:length(Datasets)) {
+  #Select dataset.
+  Data <- Datasets[[i]]
+
+  #Set starting values manually.
+  current <- c(0, 0, 0, log(1))
+  #Set proposal standard deviations.
+  n <- nrow(Data)
+  proposal_sd <- c(0.5, 0.5, 0.5, 0.2)*sqrt(30/n)
+  #Storage for samples.
+  chain <- matrix(0, nrow = iterations, ncol = 4)
+  accepted <- 0
+  #Calculate initial log posterior.
+  current_logpost <- logposterior(current, Data)
+
+  #Metropolis-Hastings iterations.
+  for (j in 1:iterations) {
+    #Generate proposed parameter values.
+    proposed <- c(rnorm(1, mean = current[1], sd = proposal_sd[1]),rnorm(1, mean = current[2], sd = proposal_sd[2]),rnorm(1, mean = current[3], sd = proposal_sd[3]), rnorm(1, mean = current[4], sd = proposal_sd[4]))
+
+    #Calculate proposed log posterior.
+    proposed_logpost <- logposterior(proposed, Data)
+    #Accept or reject proposal.
+    if (log(runif(1)) < proposed_logpost - current_logpost) {
+      current <- proposed
+      current_logpost <- proposed_logpost
+      accepted <- accepted + 1}
+
+    #Store current values.
+    chain[j,] <- current}
+  
+  #Remove burn-in samples.
+  chain <- chain[(burnin+1):iterations,]
+
+  #Convert log precision back to precision.
+  posterior_tau <- exp(chain[,4])
+
+  #Calculate posterior means.
+  posterior_means <- c(Beta0 = mean(chain[,1]),Beta1 = mean(chain[,2]),Beta2 = mean(chain[,3]),Tau = mean(posterior_tau))
+
+  #Store results.
+  Results_MH[[i]] <- list(Means = posterior_means,Beta0 = chain[,1],Beta1 = chain[,2],Beta2 = chain[,3],Tau = posterior_tau,Acceptance = accepted/iterations)}
+```
+
+
+```{r}
+#Display Metropolis-Hastings results.
+for (i in 1:length(Results_MH)) {
+
+  print(paste("Dataset", i))
+
+  print(Results_MH[[i]]$Means)
+
+  print(paste("Acceptance rate:", Results_MH[[i]]$Acceptance))}
+
+#Calculate 95% credible intervals.
+for (i in 1:length(Results_MH)) {
+  print(paste("Dataset", i))
+  print(quantile(Results_MH[[i]]$Beta0, c(0.025, 0.975)))
+  print(quantile(Results_MH[[i]]$Beta1, c(0.025, 0.975)))
+  print(quantile(Results_MH[[i]]$Beta2, c(0.025, 0.975)))
+  print(quantile(Results_MH[[i]]$Tau, c(0.025, 0.975)))}
+for (i in seq_along(Results_MH)) {
+  cat("Dataset", i, "\n")
+  print(abs(Results_MH[[i]]$Means - true_values))
+}
+```
+
+
+```{r}
+#Plot Metropolis-Hastings chains for all datasets.
+for (i in 1:length(Results_MH)) {
+  par(mfrow = c(2,2))
+  #Beta 0.
+  plot(Results_MH[[i]]$Beta0, type = "l",main = paste("Dataset", i, "- Beta 0"),xlab = "Iteration", ylab = "Beta 0",ylim = c(0,2)) 
+  abline(h = Truebeta_0, col = "red", lty = 2)
+  #Beta 1.
+  plot(Results_MH[[i]]$Beta1, type = "l",main = paste("Dataset", i, "- Beta 1"),xlab = "Iteration", ylab = "Beta 1",ylim = c(-1,4)) 
+  abline(h = Truebeta_1, col = "red", lty = 2)
+  #Beta 2.
+  plot(Results_MH[[i]]$Beta2, type = "l",main = paste("Dataset", i, "- Beta 2"),xlab = "Iteration", ylab = "Beta 2",ylim = c(-3,1)) 
+  abline(h = Truebeta_2, col = "red", lty = 2)
+  #Tau.
+  plot(Results_MH[[i]]$Tau, type = "l",main = paste("Dataset", i, "- Tau"),xlab = "Iteration", ylab = "Tau",ylim = c(0,2)) 
+  abline(h = Truetau, col = "red", lty = 2)}
+#Plot Metropolis-Hastings posterior distributions for all datasets.
+for (i in 1:length(Results_MH)) {
+
+  par(mfrow = c(2,2))
+
+  #Beta 0.
+  hist(Results_MH[[i]]$Beta0,main = paste("Dataset", i, "- Beta 0"),xlab = "Beta 0",xlim = c(0,2)) 
+  abline(v = Truebeta_0, col = "red")
+  #Beta 1.
+  hist(Results_MH[[i]]$Beta1,main = paste("Dataset", i, "- Beta 1"),xlab = "Beta 1",xlim = c(-1,4)) 
+  abline(v = Truebeta_1, col = "red")
+  #Beta 2.
+  hist(Results_MH[[i]]$Beta2, main = paste("Dataset", i, "- Beta 2"), xlab = "Beta 2", xlim = c(-3,1)) 
+  abline(v = Truebeta_2, col = "red")
+  #Tau.
+  hist(Results_MH[[i]]$Tau, main = paste("Dataset", i, "- Tau"), xlab = "Tau", xlim = c(0,2)) 
+  abline(v = Truetau, col = "red")
+
+}
+```
+
+Gibbs Sampling.
+```{r}
+#Gibbs Sampling.
+
+#Set seed.
+set.seed(4008)
+
+#Number of iterations.
+iterations <- 10000
+
+#Number of burn-in iterations.
+burnin <- 2000
+
+#Storage for Gibbs sampling results.
+Results_Gibbs <- list()
+
+#Apply Gibbs sampling to each data set.
+for (i in 1:length(Datasets)) {
+  #Select data set.
+  Data <- Datasets[[i]]
+  Y <- Data$Y
+  X1 <- Data$X1
+  X2 <- Data$X2
+  n <- length(Y)
+  #Set starting values.
+  beta0 <- 0; beta1 <- 0; beta2 <- 0; tau <- 1
+  #Storage for posterior samples.
+  chain <- matrix(0, nrow = iterations, ncol = 4)
+
+  #Gibbs sampling iterations.
+  for (j in 1:iterations) {
+
+    #Sample Beta 0.
+    postvar0 <- 1/(tau*n + 1/beta0var)
+    postmean0 <- postvar0*(tau*sum(Y - beta1*X1 - beta2*X2) + beta0mean/beta0var)
+    beta0 <- rnorm(1, postmean0, sqrt(postvar0))
+
+    #Sample Beta 1.
+    postvar1 <- 1/(tau*sum(X1^2) + 1/beta1var)
+
+    postmean1 <- postvar1*(tau*sum(X1*(Y - beta0 - beta2*X2)) +beta1mean/beta1var)
+
+    beta1 <- rnorm(1, postmean1, sqrt(postvar1))
+
+
+    #Sample Beta 2.
+    postvar2 <- 1/(tau*sum(X2^2) + 1/beta2var)
+    postmean2 <- postvar2*(tau*sum(X2*(Y - beta0 - beta1*X1)) +beta2mean/beta2var)
+
+    beta2 <- rnorm(1, postmean2, sqrt(postvar2))
+    
+    #Sample Tau.
+    RSS <- sum((Y - beta0 - beta1*X1 - beta2*X2)^2)
+
+    postshape <- taushape + n/2
+    postrate <- taurate + RSS/2
+
+    tau <- rgamma(1, shape = postshape, rate = postrate)
+    #Store current values.
+    chain[j,] <- c(beta0, beta1, beta2, tau)}
+
+  #Remove burn-in samples.
+  chain <- chain[(burnin+1):iterations,]
+
+  #Calculate posterior means.
+  posterior_means <- c(Beta0 = mean(chain[,1]), Beta1 = mean(chain[,2]), Beta2 = mean(chain[,3]),Tau = mean(chain[,4]))
+
+  #Store results.
+  Results_Gibbs[[i]] <- list(Means = posterior_means,Beta0 = chain[,1],Beta1 = chain[,2],Beta2 = chain[,3],Tau = chain[,4])}
+```
+
+
+Display results.
+```{r}
+#Display Gibbs sampling results.
+for (i in 1:length(Results_Gibbs)) {
+  print(paste("Dataset", i))
+  print(Results_Gibbs[[i]]$Means)}
+
+#Calculate 95% credible intervals.
+for (i in 1:length(Results_Gibbs)) {
+  print(paste("Dataset", i))
+  print(quantile(Results_Gibbs[[i]]$Beta0, c(0.025, 0.975)))
+  print(quantile(Results_Gibbs[[i]]$Beta1, c(0.025, 0.975)))
+  print(quantile(Results_Gibbs[[i]]$Beta2, c(0.025, 0.975)))
+  print(quantile(Results_Gibbs[[i]]$Tau, c(0.025, 0.975)))}
+
+# Calculate absolute estimation errors.
+for (i in seq_along(Results_Gibbs)) {
+  cat("Dataset", i, "\n")
+  error <- abs(Results_Gibbs[[i]]$Means - true_values)
+  print(error)
+}
+```
+
+
+```{r}
+#Plot Gibbs sampling chains for all datasets.
+for (i in 1:length(Results_Gibbs)) {
+  par(mfrow = c(2,2))
+
+  #Beta 0.
+  plot(Results_Gibbs[[i]]$Beta0, type = "l",main = paste("Dataset", i, "- Beta 0"),xlab = "Iteration", ylab = "Beta 0",ylim = c(0,2)) 
+  abline(h = Truebeta_0, col = "red", lty = 2)
+  #Beta 1.
+  plot(Results_Gibbs[[i]]$Beta1, type = "l", main = paste("Dataset", i, "- Beta 1"), xlab = "Iteration", ylab = "Beta 1", ylim = c(-1,4)) 
+  abline(h = Truebeta_1, col = "red", lty = 2)
+  #Beta 2.
+  plot(Results_Gibbs[[i]]$Beta2, type = "l", main = paste("Dataset", i, "- Beta 2"), xlab = "Iteration", ylab = "Beta 2", ylim = c(-3,1)) 
+  abline(h = Truebeta_2, col = "red", lty = 2)
+  #Tau.
+  plot(Results_Gibbs[[i]]$Tau, type = "l", main = paste("Dataset", i, "- Tau"), xlab = "Iteration", ylab = "Tau",ylim = c(0,2)) 
+  abline(h = Truetau, col = "red", lty = 2)}
+
+#Plot Gibbs sampling posterior distributions for all data sets.
+for (i in 1:length(Results_Gibbs)) {
+  par(mfrow = c(2,2))
+
+  #Beta 0.
+  hist(Results_Gibbs[[i]]$Beta0,main = paste("Dataset", i, "- Beta 0"),xlab = "Beta 0",xlim = c(0,2)) 
+  abline(v = Truebeta_0, col = "red")
+  #Beta 1.
+  hist(Results_Gibbs[[i]]$Beta1,main = paste("Dataset", i, "- Beta 1"),xlab = "Beta 1",xlim = c(-1,4)) 
+  abline(v = Truebeta_1, col = "red")
+  #Beta 2.
+  hist(Results_Gibbs[[i]]$Beta2,main = paste("Dataset", i, "- Beta 2"),xlab = "Beta 2",xlim = c(-3,1)) 
+  abline(v = Truebeta_2, col = "red")
+  #Tau.
+  hist(Results_Gibbs[[i]]$Tau,main = paste("Dataset", i, "- Tau"),xlab = "Tau",xlim = c(0,2)) 
+  abline(v = Truetau, col = "red")}
+```
+
+Using packages in R.
+
+```{r}
+# Set seed.
+set.seed(4008)
+# Number of prior samples.
+K <- 10000
+# Number of posterior samples.
+nsamples <- 1000
+# Storage for package results.
+Results_IS_pkg <- list()
+
+# Define prior distribution.
+logprior_IS <- function(param) {
+  sum(dnorm(param[1:3],
+            mean = c(beta0mean, beta1mean, beta2mean),
+            sd = sqrt(c(beta0var, beta1var, beta2var)),
+            log = TRUE)) +
+    dgamma(param[4], shape = taushape, rate = taurate, log = TRUE)}
+
+# Define proposal distribution (same as prior).
+proposal_IS <- function(n) { cbind( rnorm(n, beta0mean, sqrt(beta0var)),rnorm(n, beta1mean, sqrt(beta1var)),rnorm(n, beta2mean, sqrt(beta2var)),rgamma(n, shape = taushape, rate = taurate))}
+
+# Apply importance sampling to each dataset.
+for (i in 1:length(Datasets)) {
+  # Select dataset.
+  Data <- Datasets[[i]]
+  # Define log posterior.
+  target <- function(param) {sum(dnorm(Data$Y,mean = param[1] + param[2]*Data$X1 + param[3]*Data$X2,sd = sqrt(1/param[4]),log = TRUE)) + logprior_IS(param)}
+
+  # Run package importance sampling.
+  fit <- CompRiskRel::importance_sampling_censored(log_target = target,proposal_pdf = function(param) exp(logprior_IS(param)),rproposal = proposal_IS,n_sim = K)
+
+  # Generate posterior samples using package weights.
+  selected <- sample(1:K, size = nsamples, replace = TRUE, prob = fit$weights)
+  samples <- fit$draws[selected, ]
+  # Store results.
+  Results_IS_pkg[[i]] <- list(Means = setNames(fit$post_means, c("Beta0", "Beta1", "Beta2", "Tau")), Beta0 = samples[,1], Beta1 = samples[,2], Beta2 = samples[,3], Tau = samples[,4])}
+```
+
+
+```{r}
+# Display importance sampling package results.
+
+for (i in 1:length(Results_IS_pkg)) {
+  print(paste("Dataset", i))
+  # Posterior means.
+  print(Results_IS_pkg[[i]]$Means)}
+
+# Calculate 95% credible intervals.
+for (i in 1:length(Results_IS_pkg)) {
+  print(paste("Dataset", i))
+  print(quantile(Results_IS_pkg[[i]]$Beta0, c(0.025, 0.975)))
+  print(quantile(Results_IS_pkg[[i]]$Beta1, c(0.025, 0.975)))
+  print(quantile(Results_IS_pkg[[i]]$Beta2, c(0.025, 0.975)))
+  print(quantile(Results_IS_pkg[[i]]$Tau, c(0.025, 0.975)))}
+```
+
+
+```{r}
+# Plot importance sampling package results.
+
+for (i in 1:length(Results_IS_pkg)) {
+  par(mfrow = c(2,2), mar = c(3,3,2,1))
+  parameters <- c("Beta0", "Beta1", "Beta2", "Tau")
+  true_values <- c(Truebeta_0, Truebeta_1,Truebeta_2, Truetau)
+  for (j in 1:4) {
+    hist(Results_IS_pkg[[i]][[parameters[j]]],main = paste("Dataset", i, "-", parameters[j]),xlab = parameters[j]) 
+    abline(v = true_values[j], col = "red")}}
+```
+
+
+
+
+```{r}
+# Set seed.
+set.seed(4008)
+# Storage for package results.
+Results_MH_pkg <- list()
+# Apply Metropolis-Hastings to each dataset.
+for (i in 1:length(Datasets)) {par(mfrow = c(1,1), mar = c(2,2,2,1))
+  # Select data set.
+  Data <- Datasets[[i]]
+  # Run package Metropolis-Hastings.
+  res <- metropolis_glm(Y ~ X1 + X2,data = Data,family = gaussian(),iter = 8000,burnin = 2000,inits = c(0, 0, 0, 0),pm = c(0, beta0mean, beta1mean, beta2mean),pv = c(1, beta0var, beta1var, beta2var),adaptive = TRUE,guided = TRUE,block = FALSE)
+  # Convert results to MCMC object.
+  res2 <- as.mcmc(res)
+  # Store results.
+  Results_MH_pkg[[i]] <- res2
+  # Display posterior summaries.
+  print(paste("Dataset", i))
+  print(summary(res2))
+  # Plot results.
+  plot(res2)}
+```
+
+
+```{r}
+# Gibbs Sampling using R package.
+# Set seed.
+set.seed(4008)
+
+# Storage for package results.
+Results_Gibbs_pkg <- list()
+
+# Apply Gibbs sampling to each dataset.
+for (i in 1:length(Datasets)) {
+
+  # Select dataset.
+  Data <- Datasets[[i]]
+
+  # Run Gibbs sampler.
+  fit <- MCMCregress(Y ~ X1 + X2,data = Data,burnin = 2000,mcmc = 8000,thin = 1,seed = 4008 + i,
+    # Starting values.
+    beta.start = c(0,0,0),
+    # Regression coefficient priors.
+    b0 = 0,
+    B0 = 0.25,
+
+    # Precision prior.
+    c0 = 4,
+    d0 = 4)
+  # Extract posterior samples.
+  samples <- as.matrix(fit)
+
+  # Convert variance to precision.
+  posterior_tau <- 1/samples[,"sigma2"]
+
+  # Calculate posterior means.
+  posterior_means <- c(Beta0 = mean(samples[,"(Intercept)"]),Beta1 = mean(samples[,"X1"]),Beta2 = mean(samples[,"X2"]),Tau = mean(posterior_tau))
+
+  # Store results.
+  Results_Gibbs_pkg[[i]] <- list(Means = posterior_means,Beta0 = samples[,"(Intercept)"],Beta1 = samples[,"X1"],Beta2 = samples[,"X2"],Tau = posterior_tau)}
+```
+
+
+```{r}
+# Display Gibbs sampling package results.
+
+for (i in 1:length(Results_Gibbs_pkg)) {
+  print(paste("Dataset", i))
+  print(Results_Gibbs_pkg[[i]]$Means)}
+
+# Calculate 95% credible intervals.
+for (i in 1:length(Results_Gibbs_pkg)) {
+  print(paste("Dataset", i))
+  print(quantile(Results_Gibbs_pkg[[i]]$Beta0, c(0.025, 0.975)))
+  print(quantile(Results_Gibbs_pkg[[i]]$Beta1, c(0.025, 0.975)))
+  print(quantile(Results_Gibbs_pkg[[i]]$Beta2, c(0.025, 0.975)))
+  print(quantile(Results_Gibbs_pkg[[i]]$Tau, c(0.025, 0.975)))}
+```
+
+
+```{r}
+# Plot Gibbs sampling package results.
+
+for (i in 1:length(Results_Gibbs_pkg)) {
+
+  par(mfrow = c(2,2), mar = c(3,3,2,1))
+  # Posterior of Beta 0.
+  hist(Results_Gibbs_pkg[[i]]$Beta0,main = paste("Dataset", i, "- Beta 0"),xlab = "Beta 0") 
+  abline(v = Truebeta_0, col = "red")
+  # Posterior of Beta 1.
+  hist(Results_Gibbs_pkg[[i]]$Beta1,main = paste("Dataset", i, "- Beta 1"), xlab = "Beta 1")
+  abline(v = Truebeta_1, col = "red")
+
+  # Posterior of Beta 2.
+  hist(Results_Gibbs_pkg[[i]]$Beta2,main = paste("Dataset", i, "- Beta 2"),xlab = "Beta 2")
+  abline(v = Truebeta_2, col = "red")
+
+  # Posterior of Tau.
+  hist(Results_Gibbs_pkg[[i]]$Tau,main = paste("Dataset", i, "- Tau"),xlab = "Tau")
+  abline(v = Truetau, col = "red")
+
+}
+```
+
+Prior sensitivity. 
+```{r}
+# Prior sensitivity analysis.
+set.seed(4008)
+
+# Different coefficient prior variances.
+prior_vars <- c(0.25, 4, 25)
+
+# Number of iterations and burn-in.
+iterations <- 10000
+burnin <- 2000
+
+# Storage for results.
+Results_Prior <- list()
+
+for (v in prior_vars) {
+
+  Results_Prior[[as.character(v)]] <- list()
+
+  # Compare small and large datasets.
+  for (i in c(1,5)) {
+
+    Data <- Datasets[[i]]
+    Y <- Data$Y
+    X1 <- Data$X1
+    X2 <- Data$X2
+    n <- length(Y)
+
+    # Starting values.
+    beta0 <- 0; beta1 <- 0; beta2 <- 0; tau <- 1
+
+    # Storage for posterior samples.
+    chain <- matrix(0, nrow = iterations, ncol = 4)
+
+    for (j in 1:iterations) {
+
+      # Sample Beta 0.
+      postvar0 <- 1/(tau*n + 1/v)
+      postmean0 <- postvar0*(tau*sum(Y - beta1*X1 - beta2*X2) + beta0mean/v)
+      beta0 <- rnorm(1, postmean0, sqrt(postvar0))
+
+      # Sample Beta 1.
+      postvar1 <- 1/(tau*sum(X1^2) + 1/v)
+      postmean1 <- postvar1*(tau*sum(X1*(Y - beta0 - beta2*X2)) + beta1mean/v)
+      beta1 <- rnorm(1, postmean1, sqrt(postvar1))
+
+      # Sample Beta 2.
+      postvar2 <- 1/(tau*sum(X2^2) + 1/v)
+      postmean2 <- postvar2*(tau*sum(X2*(Y - beta0 - beta1*X1)) + beta2mean/v)
+      beta2 <- rnorm(1, postmean2, sqrt(postvar2))
+
+      # Sample Tau.
+      RSS <- sum((Y - beta0 - beta1*X1 - beta2*X2)^2)
+      postshape <- taushape + n/2
+      postrate <- taurate + RSS/2
+      tau <- rgamma(1, shape = postshape, rate = postrate)
+
+      # Store samples.
+      chain[j,] <- c(beta0, beta1, beta2, tau)
+    }
+
+    # Remove burn-in.
+    chain <- chain[(burnin+1):iterations,]
+    colnames(chain) <- c("Beta0", "Beta1", "Beta2", "Tau")
+
+    # Posterior means and 95% credible intervals.
+    posterior_means <- colMeans(chain)
+    credible_intervals <- apply(chain, 2, quantile, probs = c(0.025, 0.975))
+
+    # Store results.
+    Results_Prior[[as.character(v)]][[as.character(i)]] <-
+      list(Means = posterior_means,
+           CI = credible_intervals,
+           Samples = chain)
+
+    # Display results.
+    cat("\nPrior variance:", v, "| Dataset:", i, "\n")
+    print(round(posterior_means, 3))
+    print(round(credible_intervals, 3))
+  }
+}
+```
+
