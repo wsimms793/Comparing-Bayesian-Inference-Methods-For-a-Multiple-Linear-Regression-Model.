@@ -108,15 +108,15 @@ Plots.
 #Plot posterior distributions for all data sets.
 for (i in 1:length(Results_IS)){
   #Set plotting layout.
-  par(mfrow = c(2,2))
+  par(mfrow = c(2,2), mar = c(4,4,1,1))
   #Posterior of Beta 0.
-  hist(Results_IS[[i]]$Beta0,main = paste("Dataset", i, "- Beta 0"),xlab = "Beta 0",xlim = c(0,2));abline(v = Truebeta_0, col = "red")
+  hist(Results_IS[[i]]$Beta0,main = "",xlab = "Beta 0",ylab = "Frequency",xlim = c(0,2));abline(v = Truebeta_0, col = "red")
   #Posterior of Beta 1.
-  hist(Results_IS[[i]]$Beta1,main = paste("Dataset", i, "- Beta 1"),xlab = "Beta 1",xlim = c(-1,4));abline(v = Truebeta_1, col = "red")
+  hist(Results_IS[[i]]$Beta1,main = "",xlab = "Beta 1",ylab = "Frequency",xlim = c(-1,4));abline(v = Truebeta_1, col = "red")
   #Posterior of Beta 2.
-  hist(Results_IS[[i]]$Beta2,main = paste("Dataset", i, "- Beta 2"),xlab = "Beta 2",xlim = c(-3,1)) ;abline(v = Truebeta_2, col = "red")
+  hist(Results_IS[[i]]$Beta2,main = "",xlab = "Beta 2",ylab = "Frequency",xlim = c(-3,1));abline(v = Truebeta_2, col = "red")
   #Posterior of Tau.
-  hist(Results_IS[[i]]$Tau,main = paste("Dataset", i, "- Tau"),xlab = "Tau",xlim = c(0,2));abline(v = Truetau, col = "red")}
+  hist(Results_IS[[i]]$Tau,main = "",xlab = "Tau",ylab = "Frequency",xlim = c(0,2));abline(v = Truetau, col = "red")}
 ```
 Metropolis-Hastings.
 ```{r}
@@ -184,30 +184,30 @@ for (i in 1:length(Datasets)) {
 ```{r}
 #Plot Metropolis-Hastings chains for all datasets.
 for (i in 1:length(Results_MH)) {
-  par(mfrow = c(2,2))
+  par(mfrow = c(2,2), mar = c(4,4,1,1))
   #Beta 0.
-  plot(Results_MH[[i]]$Beta0, type = "l",main = paste("Dataset", i, "- Beta 0"),xlab = "Iteration", ylab = "Beta 0",ylim = c(0,2)) 
+  plot(Results_MH[[i]]$Beta0, type = "l",main = "",xlab = "Iteration", ylab = "Beta 0",ylim = c(0,2)) 
   abline(h = Truebeta_0, col = "red", lty = 2)
   #Beta 1.
-  plot(Results_MH[[i]]$Beta1, type = "l",main = paste("Dataset", i, "- Beta 1"),xlab = "Iteration", ylab = "Beta 1",ylim = c(-1,4)) 
+  plot(Results_MH[[i]]$Beta1, type = "l",main = "",xlab = "Iteration", ylab = "Beta 1",ylim = c(-1,4)) 
   abline(h = Truebeta_1, col = "red", lty = 2)
   #Beta 2.
-  plot(Results_MH[[i]]$Beta2, type = "l",main = paste("Dataset", i, "- Beta 2"),xlab = "Iteration", ylab = "Beta 2",ylim = c(-3,1)) 
+  plot(Results_MH[[i]]$Beta2, type = "l",main = "",xlab = "Iteration", ylab = "Beta 2",ylim = c(-3,1)) 
   abline(h = Truebeta_2, col = "red", lty = 2)
   #Tau.
-  plot(Results_MH[[i]]$Tau, type = "l",main = paste("Dataset", i, "- Tau"),xlab = "Iteration", ylab = "Tau",ylim = c(0,2)) 
+  plot(Results_MH[[i]]$Tau, type = "l",main = "",xlab = "Iteration", ylab = "Tau",ylim = c(0,2)) 
   abline(h = Truetau, col = "red", lty = 2)}
 #Plot Metropolis-Hastings posterior distributions for all datasets.
 for (i in 1:length(Results_MH)) {
-  par(mfrow = c(2,2))
+  par(mfrow = c(2,2), mar = c(4,4,1,1))
   #Beta 0.
-  hist(Results_MH[[i]]$Beta0,main = paste("Dataset", i, "- Beta 0"),xlab = "Beta 0",xlim = c(0,2));abline(v = Truebeta_0, col = "red")
+  hist(Results_MH[[i]]$Beta0,main = "",xlab = "Beta 0",ylab = "Frequency",xlim = c(0,2));abline(v = Truebeta_0, col = "red")
   #Beta 1.
-  hist(Results_MH[[i]]$Beta1,main = paste("Dataset", i, "- Beta 1"),xlab = "Beta 1",xlim = c(-1,4));abline(v = Truebeta_1, col = "red")
+  hist(Results_MH[[i]]$Beta1,main = "",xlab = "Beta 1",ylab = "Frequency",xlim = c(-1,4));abline(v = Truebeta_1, col = "red")
   #Beta 2.
-  hist(Results_MH[[i]]$Beta2, main = paste("Dataset", i, "- Beta 2"), xlab = "Beta 2", xlim = c(-3,1));abline(v = Truebeta_2, col = "red")
+  hist(Results_MH[[i]]$Beta2, main = "", xlab = "Beta 2", ylab = "Frequency", xlim = c(-3,1));abline(v = Truebeta_2, col = "red")
   #Tau.
-  hist(Results_MH[[i]]$Tau, main = paste("Dataset", i, "- Tau"), xlab = "Tau", xlim = c(0,2));abline(v = Truetau, col = "red")}
+  hist(Results_MH[[i]]$Tau, main = "", xlab = "Tau", ylab = "Frequency", xlim = c(0,2));abline(v = Truetau, col = "red")}
 ```
 
 Gibbs Sampling.
@@ -281,26 +281,26 @@ for (method in names(Methods)) {
 ```{r}
 #Plot Gibbs sampling chains for all datasets.
 for (i in 1:length(Results_Gibbs)) {
-  par(mfrow = c(2,2))
+  par(mfrow = c(2,2), mar = c(4,4,1,1))
   #Beta 0.
-  plot(Results_Gibbs[[i]]$Beta0, type = "l",main = paste("Dataset", i, "- Beta 0"),xlab = "Iteration", ylab = "Beta 0",ylim = c(0,2));abline(h = Truebeta_0, col = "red", lty = 2)
+  plot(Results_Gibbs[[i]]$Beta0, type = "l",main = "",xlab = "Iteration", ylab = "Beta 0",ylim = c(0,2));abline(h = Truebeta_0, col = "red", lty = 2)
   #Beta 1.
-  plot(Results_Gibbs[[i]]$Beta1, type = "l", main = paste("Dataset", i, "- Beta 1"), xlab = "Iteration", ylab = "Beta 1", ylim = c(-1,4)) ;abline(h = Truebeta_1, col = "red", lty = 2)
+  plot(Results_Gibbs[[i]]$Beta1, type = "l", main = "", xlab = "Iteration", ylab = "Beta 1", ylim = c(-1,4)) ;abline(h = Truebeta_1, col = "red", lty = 2)
   #Beta 2.
-  plot(Results_Gibbs[[i]]$Beta2, type = "l", main = paste("Dataset", i, "- Beta 2"), xlab = "Iteration", ylab = "Beta 2", ylim = c(-3,1)) ;abline(h = Truebeta_2, col = "red", lty = 2)
+  plot(Results_Gibbs[[i]]$Beta2, type = "l", main = "", xlab = "Iteration", ylab = "Beta 2", ylim = c(-3,1)) ;abline(h = Truebeta_2, col = "red", lty = 2)
   #Tau.
-  plot(Results_Gibbs[[i]]$Tau, type = "l", main = paste("Dataset", i, "- Tau"), xlab = "Iteration", ylab = "Tau",ylim = c(0,2)) ;abline(h = Truetau, col = "red", lty = 2)}
+  plot(Results_Gibbs[[i]]$Tau, type = "l", main = "", xlab = "Iteration", ylab = "Tau",ylim = c(0,2)) ;abline(h = Truetau, col = "red", lty = 2)}
 #Plot Gibbs sampling posterior distributions for all data sets.
 for (i in 1:length(Results_Gibbs)) {
-  par(mfrow = c(2,2))
+  par(mfrow = c(2,2), mar = c(4,4,1,1))
   #Beta 0.
-  hist(Results_Gibbs[[i]]$Beta0,main = paste("Dataset", i, "- Beta 0"),xlab = "Beta 0",xlim = c(0,2));abline(v = Truebeta_0, col = "red")
+  hist(Results_Gibbs[[i]]$Beta0,main = "",xlab = "Beta 0",ylab = "Frequency",xlim = c(0,2));abline(v = Truebeta_0, col = "red")
   #Beta 1.
-  hist(Results_Gibbs[[i]]$Beta1,main = paste("Dataset", i, "- Beta 1"),xlab = "Beta 1",xlim = c(-1,4));abline(v = Truebeta_1, col = "red")
+  hist(Results_Gibbs[[i]]$Beta1,main = "",xlab = "Beta 1",ylab = "Frequency",xlim = c(-1,4));abline(v = Truebeta_1, col = "red")
   #Beta 2.
-  hist(Results_Gibbs[[i]]$Beta2,main = paste("Dataset", i, "- Beta 2"),xlab = "Beta 2",xlim = c(-3,1));abline(v = Truebeta_2, col = "red")
+  hist(Results_Gibbs[[i]]$Beta2,main = "",xlab = "Beta 2",ylab = "Frequency",xlim = c(-3,1));abline(v = Truebeta_2, col = "red")
   #Tau.
-  hist(Results_Gibbs[[i]]$Tau,main = paste("Dataset", i, "- Tau"),xlab = "Tau",xlim = c(0,2));abline(v = Truetau, col = "red")}
+  hist(Results_Gibbs[[i]]$Tau,main = "",xlab = "Tau",ylab = "Frequency",xlim = c(0,2));abline(v = Truetau, col = "red")}
 ```
 
 Using packages in R.
@@ -356,11 +356,10 @@ for (i in 1:length(Results_IS_pkg)) {
 ```{r}
 # Plot importance sampling package results.
 for (i in 1:length(Results_IS_pkg)) {
-  par(mfrow = c(2,2), mar = c(3,3,2,1))
+  par(mfrow = c(2,2), mar = c(4,4,1,1))
   parameters <- c("Beta0", "Beta1", "Beta2", "Tau")
   for (j in 1:4) {
-    hist(Results_IS_pkg[[i]][[parameters[j]]],main = paste("Dataset", i, "-", parameters[j]),xlab = parameters[j]) 
-    abline(v = true_values[j], col = "red")}}
+    hist(Results_IS_pkg[[i]][[parameters[j]]], main = "", xlab = parameters[j], ylab = "Frequency");abline(v = true_values[j], col = "red")}}
 ```
 
 
@@ -429,17 +428,16 @@ for (i in 1:length(Results_Gibbs_pkg)) {
 
 ```{r}
 # Plot Gibbs sampling package results.
-
 for (i in 1:length(Results_Gibbs_pkg)) {
-  par(mfrow = c(2,2), mar = c(3,3,2,1))
-  # Posterior of Beta 0.
-  hist(Results_Gibbs_pkg[[i]]$Beta0,main = paste("Dataset", i, "- Beta 0"),xlab = "Beta 0") ;abline(v = Truebeta_0, col = "red")
-  # Posterior of Beta 1.
-  hist(Results_Gibbs_pkg[[i]]$Beta1,main = paste("Dataset", i, "- Beta 1"), xlab = "Beta 1");abline(v = Truebeta_1, col = "red")
-  # Posterior of Beta 2.
-  hist(Results_Gibbs_pkg[[i]]$Beta2,main = paste("Dataset", i, "- Beta 2"),xlab = "Beta 2");abline(v = Truebeta_2, col = "red")
-  # Posterior of Tau.
-  hist(Results_Gibbs_pkg[[i]]$Tau,main = paste("Dataset", i, "- Tau"),xlab = "Tau");abline(v = Truetau, col = "red")}
+  par(mfrow = c(2,2), mar = c(4,4,1,1), mgp = c(2.2,0.7,0))  
+  #Posterior of Beta 0.
+  hist(Results_Gibbs_pkg[[i]]$Beta0, main = "", xlab = "Beta 0", ylab = "Frequency"); abline(v = Truebeta_0, col = "red")
+  #Posterior of Beta 1.
+  hist(Results_Gibbs_pkg[[i]]$Beta1, main = "", xlab = "Beta 1", ylab = "Frequency"); abline(v = Truebeta_1, col = "red")
+  #Posterior of Beta 2.
+  hist(Results_Gibbs_pkg[[i]]$Beta2, main = "", xlab = "Beta 2", ylab = "Frequency"); abline(v = Truebeta_2, col = "red")
+  #Posterior of Tau.
+  hist(Results_Gibbs_pkg[[i]]$Tau, main = "", xlab = "Tau", ylab = "Frequency"); abline(v = Truetau, col = "red")}
 ```
 
 Prior sensitivity. 
@@ -498,3 +496,4 @@ for (v in prior_vars) {
     print(round(posterior_means, 3))
     print(round(credible_intervals, 3))}}
 ```
+
