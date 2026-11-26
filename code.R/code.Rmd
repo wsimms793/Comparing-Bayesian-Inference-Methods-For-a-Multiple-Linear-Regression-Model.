@@ -81,13 +81,14 @@ set.seed(4008)
 K <- 10000;nsamples <- 1000
 #Storage for importance sampling results.
 Results_IS <- list()
-#Apply importance sampling to each dataset.
+#Apply importance sampling to each data set.
 for (i in 1:length(Datasets)) {
   #Select data set.
   Data <- Datasets[[i]]
   Y <- Data$Y;X1 <- Data$X1;X2 <- Data$X2
   #Generate samples from the prior distributions.
   beta0_samples<-rnorm(K,beta0mean,sqrt(beta0var));beta1_samples<-rnorm(K,beta1mean,sqrt(beta1var));beta2_samples<-rnorm(K, beta2mean, sqrt(beta2var));tau_samples<-rgamma(K,shape = taushape, rate = taurate)
+  #Storage for weights.
   #Storage for log weights.
   logweights <- numeric(K)
   #Calculate log weights.
@@ -122,7 +123,8 @@ Metropolis-Hastings.
 ```{r}
 #Calculate log posterior.
 logposterior <- function(param, Data) {
-  beta0 <- param[1];beta1 <- param[2];beta2 <- param[3];tau <- exp(param[4])
+  beta0 <- param[1];beta1 <- param[2];beta2 <- param[3];tau <- param[4]
+  if (tau <= 0) {return(-Inf)}
   #Calculate log likelihood.
   loglikelihood <- sum(dnorm(Data$Y,mean = beta0 + beta1*Data$X1 + beta2*Data$X2, sd = sqrt(1/tau), log = TRUE))
   #Calculate log prior.
@@ -131,7 +133,7 @@ logposterior <- function(param, Data) {
               dnorm(beta2, beta2mean, sqrt(beta2var), log = TRUE) +
               dgamma(tau, shape = taushape, rate = taurate, log = TRUE)
   #Return log posterior.
-  return(loglikelihood + logprior + param[4])}
+  return(loglikelihood + logprior)}
 ```
 
 
@@ -147,7 +149,7 @@ for (i in 1:length(Datasets)) {
   #Select dataset.
   Data <- Datasets[[i]]
   #Set starting values manually.
-  current <- c(0, 0, 0, log(1))
+  current <- c(0, 0, 0, 1)
   #Set proposal standard deviations.
   n <- nrow(Data)
   proposal_sd <- c(0.5, 0.5, 0.5, 0.2)*sqrt(30/n)
@@ -171,8 +173,8 @@ for (i in 1:length(Datasets)) {
     chain[j,] <- current}
   #Remove burn-in samples.
   chain <- chain[(burnin+1):iterations,]
-  #Convert log precision back to precision.
-  posterior_tau <- exp(chain[,4])
+  #Extract precision samples.
+  posterior_tau <- chain[,4]
   #Calculate posterior means.
   posterior_means <- c(Beta0 = mean(chain[,1]),Beta1 = mean(chain[,2]),Beta2 = mean(chain[,3]),Tau = mean(posterior_tau))
   #Store results.
