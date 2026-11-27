@@ -274,7 +274,7 @@ for (method in names(Methods)) {
     print(round(abs(Results$Means - true_values), 3))
     # 95% credible intervals.
     CI <- sapply(parameters, function(p)
-      quantile(Results[[p]], c(0.025, 0.975)))
+      quantile(Results[[p]], c(0.025, 0.97 5)))
     print(round(CI, 3))}}
 ```
 
@@ -447,10 +447,8 @@ Prior sensitivity.
 ```{r}
 # Prior sensitivity analysis.
 set.seed(4008)
-
 # Different coefficient prior variances.
 prior_vars <- c(0.25, 4, 25)
-
 # Number of iterations and burn-in.
 iterations <- 10000;burnin <- 2000
 # Storage for results.
@@ -498,5 +496,49 @@ for (v in prior_vars) {
     cat("\nPrior variance:", v, "| Dataset:", i, "\n")
     print(round(posterior_means, 3))
     print(round(credible_intervals, 3))}}
+```
+Bar chart for Confidence/Credible interval sizes.
+```{r}
+#For beta1.
+#Storage for interval widths.
+Widths <- data.frame()
+#Calculate interval widths for each dataset.
+for (i in 1:length(Datasets)) {
+  #Least squares confidence interval width.
+  LS <- diff(confint(Results_LS[[i]])["X1",])
+  #Bayesian credible interval widths.
+  IS <- diff(quantile(Results_IS[[i]]$Beta1, c(0.025,0.975)))
+  MH <- diff(quantile(Results_MH[[i]]$Beta1, c(0.025,0.975)))
+  GS <- diff(quantile(Results_Gibbs[[i]]$Beta1, c(0.025,0.975)))
+  #Store interval widths.
+  Widths <- rbind(Widths, data.frame(Dataset = i,Method = c("LS/ML","IS","MH","GS"),Width = c(LS,IS,MH,GS)))}
+#Label datasets.
+Widths$Dataset <- factor(Widths$Dataset, levels = 1:6,labels = c("n=30\nrho=0","n=30\nrho=0.9","n=250\nrho=0","n=250\nrho=0.9","n=1000\nrho=0","n=1000\nrho=0.9"))
+#Order inference methods.
+Widths$Method <- factor(Widths$Method,levels = c("LS/ML","IS","MH","GS"))
+#Plot interval widths.
+ggplot(Widths, aes(x = Dataset, y = Width, fill = Method)) +geom_col(position = "dodge") +labs(x = "", y = "95% interval width") +theme_bw() +theme(legend.position = "top")
+```
+```{r}
+#For Beta2.
+#Storage for interval widths.
+Widths <- data.frame()
+#Calculate interval widths for each dataset.
+for (i in 1:length(Datasets)) {
+  #Least squares confidence interval width.
+  LS <- diff(confint(Results_LS[[i]])["X2",])
+  #Bayesian credible interval widths.
+  IS <- diff(quantile(Results_IS[[i]]$Beta2, c(0.025,0.975)))
+  MH <- diff(quantile(Results_MH[[i]]$Beta2, c(0.025,0.975)))
+  GS <- diff(quantile(Results_Gibbs[[i]]$Beta2, c(0.025,0.975)))
+  #Store interval widths.
+  Widths <- rbind(Widths, data.frame(Dataset = i,Method = c("LS/ML","IS","MH","GS"),Width = c(LS,IS,MH,GS)))}
+#Label datasets.
+Widths$Dataset <- factor(Widths$Dataset, levels = 1:6,
+  labels = c("n=30\nrho=0","n=30\nrho=0.9","n=250\nrho=0","n=250\nrho=0.9","n=1000\nrho=0","n=1000\nrho=0.9"))
+#Order inference methods.
+Widths$Method <- factor(Widths$Method,levels = c("LS/ML","IS","MH","GS"))
+#Plot interval widths.
+ggplot(Widths, aes(x = Dataset, y = Width, fill = Method)) +geom_col(position = "dodge") +labs(x = "", y = "95% interval width") +theme_bw() + theme(legend.position = "top")
 ```
 
