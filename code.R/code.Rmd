@@ -78,8 +78,7 @@ Importance Sampling.
 #Set seed.
 set.seed(4008)
 #Number of prior/posterior samples.
-K <- 10000;nsamples <- 1000
-#Storage for importance sampling results.
+K <- 50000;nsamples <- 8000#Storage for importance sampling results.
 Results_IS <- list()
 #Apply importance sampling to each data set.
 for (i in 1:length(Datasets)) {
@@ -308,10 +307,11 @@ for (i in 1:length(Results_Gibbs)) {
 Using packages in R.
 
 ```{r}
+#Importance Sampling.
 # Set seed.
 set.seed(4008)
 # Number of prior/posterior samples.
-K <- 10000;nsamples <- 1000
+K <- 50000;nsamples <- 8000
 # Storage for package results.
 Results_IS_pkg <- list()
 # Define prior distribution.
@@ -356,7 +356,7 @@ for (i in 1:length(Results_IS_pkg)) {
 
 
 ```{r}
-# Plot importance sampling package results.
+# Plot importance sampling package results using R package.
 for (i in 1:length(Results_IS_pkg)) {
   par(mfrow = c(2,2), mar = c(4,4,1,1))
   parameters <- c("Beta0", "Beta1", "Beta2", "Tau")
@@ -368,6 +368,7 @@ for (i in 1:length(Results_IS_pkg)) {
 
 
 ```{r}
+#Metropolis-Hastings using R package.
 # Set seed.
 set.seed(4008)
 # Storage for package results.
