@@ -517,7 +517,7 @@ Widths$Dataset <- factor(Widths$Dataset, levels = 1:6,labels = c("n=30\nrho=0","
 #Order inference methods.
 Widths$Method <- factor(Widths$Method,levels = c("LS/ML","IS","MH","GS"))
 #Plot interval widths.
-ggplot(Widths, aes(x = Dataset, y = Width, fill = Method)) +geom_col(position = "dodge") +labs(x = "", y = "95% interval width") +theme_bw() +theme(legend.position = "top")
+ggplot(Widths, aes(x = Dataset, y = Width, fill = Method)) +geom_col(position = "dodge") +labs(x = "", y = "95% interval width") +theme_bw() +theme(legend.position = "top",panel.grid = element_blank())
 ```
 ```{r}
 #For Beta2.
@@ -539,6 +539,6 @@ Widths$Dataset <- factor(Widths$Dataset, levels = 1:6,
 #Order inference methods.
 Widths$Method <- factor(Widths$Method,levels = c("LS/ML","IS","MH","GS"))
 #Plot interval widths.
-ggplot(Widths, aes(x = Dataset, y = Width, fill = Method)) +geom_col(position = "dodge") +labs(x = "", y = "95% interval width") +theme_bw() + theme(legend.position = "top")
+ggplot(Widths, aes(x = Dataset, y = Width, fill = Method)) +geom_col(position = "dodge") +labs(x = "", y = "95% interval width") +theme_bw() + theme(legend.position = "top",panel.grid = element_blank())
 ```
 
