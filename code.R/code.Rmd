@@ -55,15 +55,25 @@ Ordinary Least Squares Estimation.
 ```{r}
 #Storage for all data.
 Results_LS <- list()
+#Storage for computational runtimes.
+Time_LS <- numeric(length(Datasets))
 #Fit for each data set.
 for (i in 1:length(Datasets)){
-  Data <- Datasets[[i]]; Results_LS[[i]] <- lm(Y ~ X1 + X2, data = Data)}
+  #Record starting time.
+  Start <- Sys.time()
+  Data <- Datasets[[i]]; Results_LS[[i]] <- lm(Y ~ X1 + X2, data = Data)
+  #Maximum likelihood estimate of tau.
+  RSS <- sum(Results_LS[[i]]$residuals^2);n <- nrow(Datasets[[i]]);Tau_MLE <- n/RSS
+  #Record computational runtime in seconds.
+  Time_LS[i] <- as.numeric(difftime(Sys.time(), Start, units = "secs"))}
 #Display results.
 for (i in 1:length(Results_LS)) {
   print(paste("Dataset", i));print(summary(Results_LS[[i]]));print(confint(Results_LS[[i]]))
   #Maximum likelihood estimate of tau.
   RSS <- sum(Results_LS[[i]]$residuals^2);n <- nrow(Datasets[[i]]);Tau_MLE <- n/RSS
-  print(paste("Tau:", Tau_MLE))}
+  print(paste("Tau:", Tau_MLE))
+  #Display computational runtime.
+  print(paste("Runtime (seconds):", Time_LS[i]))}
 ```
 
 Hyper parameters setup.
@@ -78,10 +88,15 @@ Importance Sampling.
 #Set seed.
 set.seed(4008)
 #Number of prior/posterior samples.
-K <- 50000;nsamples <- 8000#Storage for importance sampling results.
+K <- 50000;nsamples <- 8000
+#Storage for importance sampling results.
 Results_IS <- list()
+#Storage for computational runtimes.
+Time_IS <- numeric(length(Datasets))
 #Apply importance sampling to each data set.
 for (i in 1:length(Datasets)) {
+  #Record starting time.
+  Start <- Sys.time()
   #Select data set.
   Data <- Datasets[[i]]
   Y <- Data$Y;X1 <- Data$X1;X2 <- Data$X2
@@ -100,7 +115,11 @@ for (i in 1:length(Datasets)) {
   selected <- sample(1:K, size = nsamples,replace = TRUE, prob = weights)
   posterior_beta0 <- beta0_samples[selected];posterior_beta1 <- beta1_samples[selected];posterior_beta2 <- beta2_samples[selected];posterior_tau <- tau_samples[selected]
   #Store results.
-  Results_IS[[i]] <- list(Means = posterior_means,Beta0 = posterior_beta0,Beta1 = posterior_beta1,Beta2 = posterior_beta2,Tau = posterior_tau)}
+  Results_IS[[i]] <- list(Means = posterior_means,Beta0 = posterior_beta0,Beta1 = posterior_beta1,Beta2 = posterior_beta2,Tau = posterior_tau)
+  #Record computational runtime in seconds.
+  Time_IS[i] <- as.numeric(difftime(Sys.time(), Start, units = "secs"))}
+#Display computational runtimes.
+print(Time_IS)
 ```
 
 Plots.
@@ -143,8 +162,12 @@ set.seed(4008)
 iterations <- 10000;burnin <- 2000
 #Storage for Metropolis-Hastings results.
 Results_MH <- list()
+#Storage for computational runtimes.
+Time_MH <- numeric(length(Datasets))
 #Apply Metropolis-Hastings to each dataset.
 for (i in 1:length(Datasets)) {
+  #Record starting time.
+  Start <- Sys.time()
   #Select dataset.
   Data <- Datasets[[i]]
   #Set starting values manually.
@@ -177,7 +200,11 @@ for (i in 1:length(Datasets)) {
   #Calculate posterior means.
   posterior_means <- c(Beta0 = mean(chain[,1]),Beta1 = mean(chain[,2]),Beta2 = mean(chain[,3]),Tau = mean(posterior_tau))
   #Store results.
-  Results_MH[[i]] <- list(Means = posterior_means,Beta0 = chain[,1],Beta1 = chain[,2],Beta2 = chain[,3],Tau = posterior_tau,Acceptance = accepted/iterations)}
+  Results_MH[[i]] <- list(Means = posterior_means,Beta0 = chain[,1],Beta1 = chain[,2],Beta2 = chain[,3],Tau = posterior_tau,Acceptance = accepted/iterations)
+  #Record computational runtime in seconds.
+  Time_MH[i] <- as.numeric(difftime(Sys.time(), Start, units = "secs"))}
+#Display computational runtimes.
+print(Time_MH)
 ```
 
 
@@ -220,8 +247,12 @@ set.seed(4008)
 iterations <- 10000;burnin <- 2000
 #Storage for Gibbs sampling results.
 Results_Gibbs <- list()
+#Storage for computational runtimes.
+Time_Gibbs <- numeric(length(Datasets))
 #Apply Gibbs sampling to each data set.
 for (i in 1:length(Datasets)) {
+  #Record starting time.
+  Start <- Sys.time()
   #Select data set.
   Data <- Datasets[[i]]
   Y <- Data$Y;X1 <- Data$X1;X2 <- Data$X2;n <- length(Y)
@@ -255,7 +286,11 @@ for (i in 1:length(Datasets)) {
   #Calculate posterior means.
   posterior_means <- c(Beta0 = mean(chain[,1]), Beta1 = mean(chain[,2]), Beta2 = mean(chain[,3]),Tau = mean(chain[,4]))
   #Store results.
-  Results_Gibbs[[i]] <- list(Means = posterior_means,Beta0 = chain[,1],Beta1 = chain[,2],Beta2 = chain[,3],Tau = chain[,4])}
+  Results_Gibbs[[i]] <- list(Means = posterior_means,Beta0 = chain[,1],Beta1 = chain[,2],Beta2 = chain[,3],Tau = chain[,4])
+  #Record computational runtime in seconds.
+  Time_Gibbs[i] <- as.numeric(difftime(Sys.time(), Start, units = "secs"))}
+#Display computational runtimes.
+print(Time_Gibbs)
 ```
 
 
